@@ -39,7 +39,7 @@ def preprocessing(rxns: List, args: Any, rxn_classes: List = [], rxns_id=[]) -> 
 
         if (prod_mol is None) or (prod_mol.GetNumAtoms() <= 1) or (prod_mol.GetNumBonds() <= 1):  # Explanation: checks this condition to choose the next execution path
             print(  # Explanation: prints progress or diagnostic information
-                f'Product has 0 or 1 atom or 1 bond, Skipping reaction {idx}')  # Explanation: executes this statement as part of extract reaction edit labels and vocabularies
+                f'Product has 0 or 1 atom or 1 bond, skipping reaction {rxns_id[idx] if idx < len(rxns_id) else idx}')  # Explanation: executes this statement as part of extract reaction edit labels and vocabularies
             print()  # Explanation: prints progress or diagnostic information
             sys.stdout.flush()  # Explanation: executes this statement as part of extract reaction edit labels and vocabularies
             continue  # Explanation: skips the rest of this loop iteration
@@ -48,7 +48,7 @@ def preprocessing(rxns: List, args: Any, rxn_classes: List = [], rxns_id=[]) -> 
 
         if (react_mol is None) or (react_mol.GetNumAtoms() <= 1) or (prod_mol.GetNumBonds() <= 1):  # Explanation: checks this condition to choose the next execution path
             print(  # Explanation: prints progress or diagnostic information
-                f'Reactant has 0 or 1 atom or 1 bond, Skipping reaction {idx}')  # Explanation: executes this statement as part of extract reaction edit labels and vocabularies
+                f'Reactant has 0 or 1 atom or 1 bond, skipping reaction {rxns_id[idx] if idx < len(rxns_id) else idx}')  # Explanation: executes this statement as part of extract reaction edit labels and vocabularies
             print()  # Explanation: prints progress or diagnostic information
             sys.stdout.flush()  # Explanation: executes this statement as part of extract reaction edit labels and vocabularies
             continue  # Explanation: skips the rest of this loop iteration
@@ -68,7 +68,7 @@ def preprocessing(rxns: List, args: Any, rxn_classes: List = [], rxns_id=[]) -> 
 
         edits_accepted = check_edits(rxn_data.edits)  # Explanation: assigns an intermediate value used by later computation
         if not edits_accepted:  # Explanation: checks this condition to choose the next execution path
-            print(f'Edit: Add new bond. Skipping reaction {idx}')  # Explanation: prints progress or diagnostic information
+            print(f'Edit: Add new bond, skipping reaction {rxns_id[idx] if idx < len(rxns_id) else idx}')  # Explanation: prints progress or diagnostic information
             print()  # Explanation: prints progress or diagnostic information
             sys.stdout.flush()  # Explanation: executes this statement as part of extract reaction edit labels and vocabularies
             continue  # Explanation: skips the rest of this loop iteration
@@ -139,7 +139,7 @@ def preprocessing(rxns: List, args: Any, rxn_classes: List = [], rxns_id=[]) -> 
             for edit in rxn_data.edits:  # Explanation: iterates over this collection to process each item
                 if edit[0] == 'Attaching LG' and edit not in lg_edits:  # Explanation: checks this condition to choose the next execution path
                     print(  # Explanation: prints progress or diagnostic information
-                        f'The number of {edit} in training set is very small, skipping reaction')  # Explanation: executes this statement as part of extract reaction edit labels and vocabularies
+                        f'The number of {edit} in training set is very small, skipping reaction {rxns_id[idx] if idx < len(rxns_id) else idx}')  # Explanation: executes this statement as part of extract reaction edit labels and vocabularies
                     rxn_data = None  # Explanation: computes an intermediate value for molecular graph editing
             if rxn_data is not None:  # Explanation: checks this condition to choose the next execution path
                 counter.append(len(rxn_data.edits))  # Explanation: executes this statement as part of extract reaction edit labels and vocabularies
