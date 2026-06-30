@@ -9,7 +9,9 @@ import argparse  # Explanation: imports argparse for canonicalize reaction SMILE
 import pandas as pd  # Explanation: imports pandas as pd for canonicalize reaction SMILES and remap atom numbers
 
 from tqdm import tqdm  # Explanation: imports selected names needed to canonicalize reaction SMILES and remap atom numbers
-from kgcl_retro.paths import resolve_project_paths  # Explanation: imports shared project-root path resolution for package CLIs.
+from kgcl_retro.paths import resolve_project_paths
+from kgcl_retro.data.dataset_config import get_dataset_spec, normalize_dataset_name, normalize_split_name, find_split_csv, output_split_csv
+from kgcl_retro.chemistry.atom_mapping import validate_atom_mapped_reaction  # Explanation: imports shared project-root path resolution for package CLIs.
 
 def canonicalize_prod(p):  # Explanation: defines canonicalize_prod, which canonicalizes a product and assigns atom-map numbers
     import copy  # Explanation: imports copy for canonicalize reaction SMILES and remap atom numbers
@@ -29,8 +31,8 @@ def canonicalize_prod(p):  # Explanation: defines canonicalize_prod, which canon
 def canonicalize(smiles):  # Explanation: defines canonicalize, which removes atom maps/hydrogens and canonicalizes SMILES
     try:  # Explanation: starts a protected block for operations that may fail
         tmp = Chem.MolFromSmiles(smiles)  # Explanation: parses a SMILES string into an RDKit molecule
-    except:  # Explanation: handles failures from the preceding try block
-        print('no mol', flush=True)  # Explanation: prints progress or diagnostic information
+    except Exception as e:  # Explanation: handles failures from the preceding try block
+        print(f'no mol: {e}', flush=True)  # Explanation: prints progress or diagnostic information
         return smiles  # Explanation: returns this computed result to the caller
     if tmp is None:  # Explanation: checks this condition to choose the next execution path
         return smiles  # Explanation: returns this computed result to the caller
@@ -118,43 +120,46 @@ def remap_rxn_smi(rxn_smi):  # Explanation: defines remap_rxn_smi, which remaps 
 
 def main():  # Explanation: defines main, which runs this script from command-line arguments
     parser = argparse.ArgumentParser()  # Explanation: creates command-line argument parser
-    parser.add_argument('--dataset', type=str, default='USPTO_full',  # Explanation: chooses which USPTO dataset split to use
-                        help='dataset: USPTO_50k or USPTO_full')  # Explanation: assigns an intermediate value used by later computation
-    parser.add_argument('--mode', type=str, default='test',  # Explanation: selects train, valid, or test split
-                        help='Type of dataset being prepared: train or valid or test')  # Explanation: assigns an intermediate value used by later computation
-    parser.add_argument('--root_dir', type=str, default='.',  # Explanation: selects the root directory containing data and experiments.
-                        help='Repository/data root containing data/ and experiments/')  # Explanation: documents the package-relative root directory option.
-    args = parser.parse_args()  # Explanation: parses command-line options
+    parser.add_argument('--dataset', type=str, default='USPTO_full',
+                        help='dataset: USPTO_50k, USPTO_full, or uspto_mit')
+    parser.add_argument('--mode', type=str, default='test',
+                        help='Type of dataset being prepared: train, val/valid, or test')
+    parser.add_argument('--root_dir', type=str, default='.',
+                        help='Repository/data root containing data/ and experiments/')
+    args = parser.parse_args()
 
-    args.dataset = args.dataset.lower()  # Explanation: assigns an intermediate value used by later computation
-    paths = resolve_project_paths(args.root_dir)  # Explanation: resolves the root directory used by package CLI file operations.
-    datadir = str(paths.dataset_dir(args.dataset))  # Explanation: builds the selected dataset directory from the resolved root.
-    new_file = f'canonicalized_{args.mode}.csv'  # Explanation: assigns an intermediate value used by later computation
-    filename = f'raw_{args.mode}.csv'  # Explanation: assigns an intermediate value used by later computation
-    df = pd.read_csv(os.path.join(datadir, filename))  # Explanation: builds a filesystem path
-    print(f"Processing file of size: {len(df)}")  # Explanation: prints progress or diagnostic information
+    args.dataset = normalize_dataset_name(args.dataset)
+    split = normalize_split_name(args.mode)
+    spec = get_dataset_spec(args.dataset)
+    paths = resolve_project_paths(args.root_dir)
+    datadir = paths.dataset_dir(args.dataset)
+    input_file = find_split_csv(datadir, 'raw', split)
+    output_file = output_split_csv(datadir, 'canonicalized', split)
+    df = pd.read_csv(input_file)
+    print(f"Processing file of size: {len(df)}")
 
-    if args.dataset == 'uspto_50k':  # Explanation: checks this condition to choose the next execution path
-        new_dict = {'id': [], 'class': [], 'reactants>reagents>production': []}  # Explanation: assigns an intermediate value used by later computation
-    else:  # Explanation: handles the fallback branch for the preceding condition
-        new_dict = {'id': [], 'reactants>reagents>production': []}  # Explanation: assigns an intermediate value used by later computation
+    new_dict = {'id': [], 'reactants>reagents>production': []}
+    if spec.has_reaction_classes:
+        new_dict['class'] = []
 
-    for idx in tqdm(range(len(df)), desc="Processing reactions"):  # Explanation: iterates over this collection to process each item
-        element = df.loc[idx]  # Explanation: assigns an intermediate value used by later computation
-        if args.dataset == 'uspto_50k':  # Explanation: checks this condition to choose the next execution path
-            uspto_id, class_id, rxn_smi = element['id'], element['class'], element['reactants>reagents>production']  # Explanation: assigns an intermediate value used by later computation
-        else:  # Explanation: handles the fallback branch for the preceding condition
-            uspto_id, rxn_smi = element['id'], element['reactants>reagents>production']  # Explanation: assigns an intermediate value used by later computation
+    for idx in tqdm(range(len(df)), desc="Processing reactions"):
+        element = df.loc[idx]
+        uspto_id = element['id']
+        rxn_smi = element['reactants>reagents>production']
+        errors = validate_atom_mapped_reaction(rxn_smi)
+        if errors:
+            raise ValueError(f"Invalid atom mapping before canonicalization at row id={uspto_id}: {'; '.join(errors)}; reaction={str(rxn_smi)[:160]}")
+        try:
+            rxn_smi_new, _ = remap_rxn_smi(rxn_smi)
+        except Exception as e:
+            raise RuntimeError(f"Failed to canonicalize row id={uspto_id}: {e}; reaction={str(rxn_smi)[:160]}") from e
+        new_dict['id'].append(uspto_id)
+        if spec.has_reaction_classes:
+            new_dict['class'].append(element['class'])
+        new_dict['reactants>reagents>production'].append(rxn_smi_new)
 
-        rxn_smi_new, _ = remap_rxn_smi(rxn_smi)  # Explanation: computes an intermediate value for molecular graph editing
-        new_dict['id'].append(uspto_id)  # Explanation: executes this statement as part of canonicalize reaction SMILES and remap atom numbers
-        if args.dataset == 'uspto_50k':  # Explanation: checks this condition to choose the next execution path
-            new_dict['class'].append(class_id)  # Explanation: executes this statement as part of canonicalize reaction SMILES and remap atom numbers
-        new_dict['reactants>reagents>production'].append(rxn_smi_new)  # Explanation: executes this statement as part of canonicalize reaction SMILES and remap atom numbers
-
-    new_df = pd.DataFrame.from_dict(new_dict)  # Explanation: assigns an intermediate value used by later computation
-    new_df.to_csv(os.path.join(datadir, new_file), index=False)  # Explanation: builds a filesystem path
+    pd.DataFrame.from_dict(new_dict).to_csv(output_file, index=False)
 
 
-if __name__ == "__main__":  # Explanation: runs the CLI entry point only when this file is executed directly
-    main()  # Explanation: executes this statement as part of canonicalize reaction SMILES and remap atom numbers
+if __name__ == "__main__":
+    main()
