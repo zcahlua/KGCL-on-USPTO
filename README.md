@@ -128,6 +128,46 @@ python eval-full.py
 This will display the exact accuracy results for reaction class unknown setting
 
 
+## Downloading USPTO-MIT / USPTO-480K
+
+KGCL requires atom-mapped reaction SMILES for graph-edit label extraction. For USPTO-MIT / USPTO-480K, the recommended starting point is the atom-mapped USPTO archive from the `wengong-jin/nips17-rexgen` repository:
+
+- Source page: https://github.com/wengong-jin/nips17-rexgen/tree/master/USPTO
+- Direct download: https://github.com/wengong-jin/nips17-rexgen/raw/master/USPTO/data.zip
+
+That repository describes `USPTO/data.zip` as a train/dev/test split containing approximately 480K fully atom-mapped reactions. KGCL uses this dataset only in retrosynthesis-by-inversion mode: USPTO-MIT / USPTO-480K is commonly used for forward reaction prediction, but this repository reads each atom-mapped reaction as `reactants>>product`, uses the product graph as model input, and extracts graph-edit labels that reconstruct the reactant graphs.
+
+Molecular Transformer-style tokenized USPTO-MIT data is also available here:
+
+- Molecular Transformer documentation: https://github.com/pschwllr/MolecularTransformer#pre-processing
+- Tokenized data folder: https://ibm.ent.box.com/v/MolecularTransformerData
+
+The tokenized Molecular Transformer data may be useful for forward reaction-prediction baselines, but it should not be assumed to be directly KGCL-ready. Standard tokenized forward-prediction files may be missing atom maps or may use layouts intended for sequence-to-sequence product prediction rather than graph-edit retrosynthesis. Before running KGCL canonicalization or preprocessing, verify that the reactions are atom-mapped. Do not commit the downloaded archive or extracted dataset to this repository.
+
+Example local-only download commands:
+
+```bash
+mkdir -p data/downloads/uspto_mit
+
+curl -L \
+  -o data/downloads/uspto_mit/uspto_480k_atom_mapped.zip \
+  https://github.com/wengong-jin/nips17-rexgen/raw/master/USPTO/data.zip
+
+unzip -q \
+  data/downloads/uspto_mit/uspto_480k_atom_mapped.zip \
+  -d data/downloads/uspto_mit/atom_mapped
+```
+
+The current `kgcl-import-uspto-mit` command imports Molecular Transformer / Graph2SMILES-style `src-*.txt` plus `tgt-*.txt` files, or split CSV files named `train.csv`, `val.csv`/`valid.csv`, and `test.csv`; it does not directly consume the `nips17-rexgen` zip archive layout. After extracting the archive, convert its train/dev/test reaction files into KGCL raw CSV files before canonicalization/preprocessing:
+
+- `data/uspto_mit/raw_train.csv`
+- `data/uspto_mit/raw_val.csv`
+- `data/uspto_mit/raw_test.csv`
+- required reaction column: `reactants>reagents>production`
+- required value format: `reactants>>product`
+
+Keep `data/uspto_mit/` and `data/downloads/` as local working directories only.
+
 ## Running KGCL on USPTO-MIT / USPTO-480K
 
 USPTO-MIT / USPTO-480K is commonly distributed for forward reaction prediction. This repository supports it as `uspto_mit` only in KGCL retrosynthesis-by-inversion mode: the model input is the product graph, the ground-truth label is the precursor/reactant side, and internal reaction strings are stored as `reactants>>product` in the existing `reactants>reagents>production` column. Results from this mode are not directly comparable to forward USPTO-480K product-prediction benchmarks.

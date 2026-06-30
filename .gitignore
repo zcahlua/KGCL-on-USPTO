@@ -1,0 +1,4 @@
+data/downloads/
+data/**/data.zip
+data/**/*.zip
+data/uspto_mit/
