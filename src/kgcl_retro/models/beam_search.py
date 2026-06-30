@@ -112,7 +112,7 @@ class BeamSearch:  # Explanation: defines BeamSearch, beam-search decoder for ed
                         'finished': False,  # Explanation: continues the current multi-line argument or data structure
                     }  # Explanation: closes the current multi-line expression
                     new_paths.append(new_path)  # Explanation: executes this statement as part of perform beam-search inference over graph edits
-                except:  # Explanation: handles failures from the preceding try block
+                except Exception as e:  # Explanation: handles failures from the preceding try block
                     continue  # Explanation: skips the rest of this loop iteration
 
         return new_paths  # Explanation: returns this computed result to the caller

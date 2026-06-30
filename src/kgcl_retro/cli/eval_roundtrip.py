@@ -21,7 +21,7 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"  # Explanation: defines 
 def canonicalize(smi):  # Explanation: defines canonicalize, which removes atom maps/hydrogens and canonicalizes SMILES
     try:  # Explanation: starts a protected block for operations that may fail
         mol = Chem.MolFromSmiles(smi)  # Explanation: parses a SMILES string into an RDKit molecule
-    except:  # Explanation: handles failures from the preceding try block
+    except Exception as e:  # Explanation: handles failures from the preceding try block
         print('no mol', flush=True)  # Explanation: prints progress or diagnostic information
         return smi  # Explanation: returns this computed result to the caller
     if mol is None:  # Explanation: checks this condition to choose the next execution path

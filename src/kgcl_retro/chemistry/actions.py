@@ -263,7 +263,7 @@ class Termination(ReactionAction):  # Explanation: defines Termination, edit act
                 if a1_max_neigh is not None and a2_max_neigh is not None:  # Explanation: checks this condition to choose the next execution path
                     try:  # Explanation: starts a protected block for operations that may fail
                         bond.SetStereoAtoms(a1_max_neigh, a2_max_neigh)  # Explanation: executes this statement as part of define executable molecular graph edit actions
-                    except:  # Explanation: handles failures from the preceding try block
+                    except Exception as e:  # Explanation: handles failures from the preceding try block
                         bond.SetStereoAtoms(a2_max_neigh, a1_max_neigh)  # Explanation: executes this statement as part of define executable molecular graph edit actions
 
         return mol  # Explanation: returns this computed result to the caller

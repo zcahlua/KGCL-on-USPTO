@@ -276,7 +276,7 @@ class KGCL(nn.Module):  # Explanation: defines KGCL, main KGCL neural network fo
                 edits_atom.append(edit_atom)  # Explanation: executes this statement as part of define the KGCL graph-edit prediction model
                 steps += 1  # Explanation: assigns an intermediate value used by later computation
 
-            except:  # Explanation: handles failures from the preceding try block
+            except Exception as e:  # Explanation: handles failures from the preceding try block
                 steps += 1  # Explanation: assigns an intermediate value used by later computation
                 continue  # Explanation: skips the rest of this loop iteration
 

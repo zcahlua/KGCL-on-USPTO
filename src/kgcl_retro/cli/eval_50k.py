@@ -40,7 +40,7 @@ def canonicalize_smiles_clear_map(smiles, return_max_frag=True):  # Explanation:
         ]  # Explanation: closes the current multi-line expression
         try:  # Explanation: starts a protected block for operations that may fail
             smi = Chem.MolToSmiles(mol, isomericSmiles=True)  # Explanation: serializes an RDKit molecule back to SMILES
-        except:  # Explanation: handles failures from the preceding try block
+        except Exception as e:  # Explanation: handles failures from the preceding try block
             if return_max_frag:  # Explanation: checks this condition to choose the next execution path
                 return '', ''  # Explanation: returns this computed result to the caller
             else:  # Explanation: handles the fallback branch for the preceding condition

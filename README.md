@@ -126,3 +126,37 @@ This will display the round-trip accuracy results for reaction class unknown set
 python eval-full.py
 ```
 This will display the exact accuracy results for reaction class unknown setting
+
+
+## Running KGCL on USPTO-MIT / USPTO-480K
+
+USPTO-MIT / USPTO-480K is commonly distributed for forward reaction prediction. This repository supports it as `uspto_mit` only in KGCL retrosynthesis-by-inversion mode: the model input is the product graph, the ground-truth label is the precursor/reactant side, and internal reaction strings are stored as `reactants>>product` in the existing `reactants>reagents>production` column. Results from this mode are not directly comparable to forward USPTO-480K product-prediction benchmarks.
+
+Atom-mapped reactions are required for graph-edit label generation. Standard unmapped USPTO-MIT text data must be atom-mapped before canonicalization/preprocessing, or explicitly skipped with `--allow-unmapped-skip` during import. RDKit-invalid rows are skipped only with `--skip-invalid`; RXNMapper is not added as a required dependency. Reagents are dropped by default when separate reagent fields exist; pass `--include-reagents-as-reactants` only if your evaluation protocol intentionally treats reagents as precursors.
+
+Supported inputs include Molecular Transformer / Graph2SMILES text layouts (`src-train.txt` / `tgt-train.txt`, `src-val.txt` or `src-valid.txt` / `tgt-val.txt` or `tgt-valid.txt`, `src-test.txt` / `tgt-test.txt`), split CSV layouts (`train.csv`, `val.csv` or `valid.csv`, `test.csv`), and a single CSV containing a `split` column. CSV files may contain `rxn_smiles`, `reaction_smiles`, `smiles`, `reactants`, `reagents`, `product`, `production`, `reactants>reagents>product`, or `reactants>reagents>production`. The importer writes `data/uspto_mit/raw_train.csv`, `raw_val.csv`, and `raw_test.csv`.
+
+```bash
+python -m pip install -e ".[dev,chem]"
+
+kgcl-import-uspto-mit \
+  --input data/MIT_mapped \
+  --output data/uspto_mit \
+  --source-format auto
+
+kgcl-canonicalize --dataset uspto_mit --mode train
+kgcl-canonicalize --dataset uspto_mit --mode valid
+kgcl-canonicalize --dataset uspto_mit --mode test
+
+kgcl-preprocess --dataset uspto_mit --mode train
+kgcl-preprocess --dataset uspto_mit --mode valid
+kgcl-preprocess --dataset uspto_mit --mode test
+
+kgcl-prepare-data --dataset uspto_mit --mode train --batch_size 256
+kgcl-prepare-data --dataset uspto_mit --mode valid --batch_size 256
+kgcl-prepare-data --dataset uspto_mit --mode test --batch_size 256
+
+kgcl-train --dataset uspto_mit --lr 1e-4 --epochs 200 --num_workers 4
+
+kgcl-eval --dataset uspto_mit --checkpoint auto --beam_size 10
+```
