@@ -19,7 +19,8 @@ from kgcl_retro.models.utils import CSVLogger, get_seq_edit_accuracy  # Explanat
 from kgcl_retro.data.datasets import RetroEditDataset, RetroEvalDataset  # Explanation: imports packaged dataset loaders.
 from kgcl_retro.chemistry.features import ATOM_FDIM, BOND_FDIM  # Explanation: imports packaged feature dimensions for model configuration.
 from kgcl_retro.chemistry.graphs import Vocab  # Explanation: imports the packaged vocabulary helper for edit labels.
-from kgcl_retro.paths import resolve_project_paths  # Explanation: imports shared project-root path resolution for package CLIs.
+from kgcl_retro.paths import resolve_project_paths
+from kgcl_retro.data.dataset_config import get_dataset_spec, normalize_dataset_name  # Explanation: imports shared project-root path resolution for package CLIs.
 
 lg = RDLogger.logger()  # Explanation: assigns an intermediate value used by later computation
 lg.setLevel(RDLogger.CRITICAL)  # Explanation: executes this statement as part of train KGCL with edit and contrastive losses
@@ -160,12 +161,13 @@ def test(model, valid_data):  # Explanation: defines test, which validates predi
 
 def main(args):  # Explanation: defines main, which runs this script from command-line arguments
 
+    args['dataset'] = normalize_dataset_name(args['dataset'])
+    spec = get_dataset_spec(args['dataset'])
+    if args.get('use_rxn_class', False) and not spec.has_reaction_classes:
+        raise ValueError(f"Dataset {args['dataset']} does not provide reaction class labels; remove --use_rxn_class")
+    if not args.pop('_lr_was_supplied', False):
+        args['lr'] = spec.default_lr
     paths = resolve_project_paths(args.get('root_dir', DEFAULT_ROOT_DIR))  # Explanation: resolves the root directory used by package CLI file operations.
-
-    if args['dataset'] == 'uspto_50k':  # Explanation: checks this condition to choose the next execution path
-        args['lr'] = 0.001  # Explanation: assigns an intermediate value used by later computation
-    elif args['dataset'] == 'uspto_full':  # Explanation: checks an alternate condition after the previous branch failed
-        args['lr'] = 0.0001  # Explanation: assigns an intermediate value used by later computation
 
     if args.get('use_rxn_class', False):  # Explanation: checks this condition to choose the next execution path
         out_dir = os.path.join(str(paths.experiments_dir),  # Explanation: builds a filesystem path
@@ -280,7 +282,7 @@ def build_arg_parser():  # Explanation: constructs the training argument parser 
                         default=512, help='MLP hidden_dim')  # Explanation: assigns an intermediate value used by later computation
     parser.add_argument('--dropout_mlp', type=float,  # Explanation: sets MLP dropout
                         default=0.2, help='MLP dropout rate')  # Explanation: assigns an intermediate value used by later computation
-    parser.add_argument('--lr', type=float, default=0.001, help='learning rate')  # Explanation: sets learning rate
+    parser.add_argument('--lr', type=float, default=None, help='learning rate')  # Explanation: sets learning rate
 
     parser.add_argument('--patience', type=int, default=5,  # Explanation: sets scheduler patience
                         help='Number of epochs with no improvement after which lr will be reduced')  # Explanation: assigns an intermediate value used by later computation
@@ -292,7 +294,7 @@ def build_arg_parser():  # Explanation: constructs the training argument parser 
                         help='Maximum number of gradient clip')  # Explanation: assigns an intermediate value used by later computation
     parser.add_argument('--print_every', type=int,  # Explanation: sets logging frequency
                         default=200, help='Print during train process')  # Explanation: assigns an intermediate value used by later computation
-    parser.add_argument('--num_workers', default=24,  # Explanation: sets dataloader worker count
+    parser.add_argument('--num_workers', type=int, default=24,  # Explanation: sets dataloader worker count
                         help='Number of processes for data loading')  # Explanation: assigns an intermediate value used by later computation
     parser.add_argument('--root_dir', type=str, default=DEFAULT_ROOT_DIR,  # Explanation: selects the root directory containing data and experiments.
                         help='Repository/data root containing data/ and experiments/')  # Explanation: documents the package-relative root directory option.
@@ -301,7 +303,11 @@ def build_arg_parser():  # Explanation: constructs the training argument parser 
 
 def cli_main():  # Explanation: parses command-line arguments and launches KGCL training.
     parser = build_arg_parser()  # Explanation: creates the shared training argument parser.
-    args = parser.parse_args().__dict__  # Explanation: parses command-line options into the dict expected by main.
+    namespace = parser.parse_args()
+    namespace._lr_was_supplied = namespace.lr is not None
+    if namespace.lr is None:
+        namespace.lr = 0.0
+    args = namespace.__dict__  # Explanation: parses command-line options into the dict expected by main.
     main(args)  # Explanation: executes this statement as part of train KGCL with edit and contrastive losses
 
 

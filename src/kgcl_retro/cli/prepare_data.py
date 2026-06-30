@@ -12,7 +12,8 @@ from kgcl_retro.chemistry.apply import apply_edit_to_mol  # Explanation: imports
 from kgcl_retro.chemistry.actions import Termination  # Explanation: imports the packaged termination action for completed edit sequences.
 from kgcl_retro.chemistry.graphs import MolGraph, RxnGraph, Vocab  # Explanation: imports packaged reaction graph and vocabulary helpers.
 from kgcl_retro.data.collate import get_batch_graphs, prepare_edit_labels  # Explanation: imports packaged graph batching and edit-label helpers.
-from kgcl_retro.paths import resolve_project_paths  # Explanation: imports shared project-root path resolution for package CLIs.
+from kgcl_retro.paths import resolve_project_paths
+from kgcl_retro.data.dataset_config import get_dataset_spec, normalize_dataset_name, normalize_split_name  # Explanation: imports shared project-root path resolution for package CLIs.
 
 def process_batch(batch_graphs, args):  # Explanation: defines process_batch, which converts graph sequences into padded tensors and labels
     lengths = torch.tensor([len(graph_seq)  # Explanation: assigns an intermediate value used by later computation
@@ -129,9 +130,12 @@ def prepare_data(args: Any) -> None:  # Explanation: defines prepare_data, which
     print(f"All {args.mode} reactions complete.")  # Explanation: prints progress or diagnostic information
     sys.stdout.flush()  # Explanation: executes this statement as part of prepare graph-edit training tensors
 
-    batch_tensors = process_batch(batch_graphs, args)  # Explanation: assigns an intermediate value used by later computation
-    print("Saving..")  # Explanation: prints progress or diagnostic information
-    torch.save(batch_tensors, os.path.join(savedir, f'batch-{batch_num}.pt'))  # Explanation: saves tensor batches or checkpoints
+    if batch_graphs:
+        batch_tensors = process_batch(batch_graphs, args)
+        print("Saving..")
+        torch.save(batch_tensors, os.path.join(savedir, f'batch-{batch_num}.pt'))
+    elif batch_num == 0:
+        raise ValueError(f"No valid reactions remained for {args.dataset}/{args.mode}; no empty batch was written")  # Explanation: saves tensor batches or checkpoints
 
 
 def main():  # Explanation: defines main, which runs this script from command-line arguments
@@ -152,7 +156,13 @@ def main():  # Explanation: defines main, which runs this script from command-li
                         help='Repository/data root containing data/ and experiments/')  # Explanation: documents the package-relative root directory option.
     args = parser.parse_args()  # Explanation: parses command-line options
 
-    args.dataset = args.dataset.lower()  # Explanation: assigns an intermediate value used by later computation
+    args.dataset = normalize_dataset_name(args.dataset)
+    args.mode = normalize_split_name(args.mode)
+    spec = get_dataset_spec(args.dataset)
+    if args.use_rxn_class and not spec.has_reaction_classes:
+        raise ValueError(f"Dataset {args.dataset} does not provide reaction class labels; remove --use_rxn_class")
+    if args.max_steps == 9:
+        args.max_steps = spec.max_edit_steps
     prepare_data(args=args)  # Explanation: assigns an intermediate value used by later computation
 
 

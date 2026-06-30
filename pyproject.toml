@@ -31,6 +31,8 @@ kgcl-train = "kgcl_retro.cli.train:cli_main"
 kgcl-eval-50k = "kgcl_retro.cli.eval_50k:main"
 kgcl-eval-full = "kgcl_retro.cli.eval_full:main"
 kgcl-eval-roundtrip = "kgcl_retro.cli.eval_roundtrip:main"
+kgcl-import-uspto-mit = "kgcl_retro.cli.import_uspto_mit:main"
+kgcl-eval = "kgcl_retro.cli.eval:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
