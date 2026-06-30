@@ -128,7 +128,13 @@ def detect_format(input_path: Path) -> str:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Import USPTO-MIT/USPTO-480K in KGCL retrosynthesis form")
+    parser = argparse.ArgumentParser(
+        description="Import USPTO-MIT/USPTO-480K in KGCL retrosynthesis form",
+        epilog=(
+            "Primary atom-mapped USPTO-480K source:\n"
+            "https://github.com/wengong-jin/nips17-rexgen/raw/master/USPTO/data.zip"
+        ),
+    )
     parser.add_argument("--input", required=True, type=Path)
     parser.add_argument("--output", type=Path, default=Path("data/uspto_mit"))
     parser.add_argument("--source-format", choices=["auto", "txt", "csv"], default="auto")
