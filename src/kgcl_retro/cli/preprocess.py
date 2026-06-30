@@ -75,7 +75,7 @@ def preprocessing(rxns: List, args: Any, rxn_classes: List = [], rxns_id=[]) -> 
 
         if args.dataset in {'uspto_full', 'uspto_mit'}:  # Explanation: checks this condition to choose the next execution path
             if len(rxn_data.edits) > args.max_steps or len(rxn_data.edits) == 1:  # Explanation: checks this condition to choose the next execution path
-                print(f'Edits step exceed max_steps or edit step is 1, skipping reaction {rxns_id[idx] if idx < len(rxns_id) else idx}')  # Explanation: prints progress or diagnostic information
+                print(f'Edits step exceed max_steps or edit step is 1. Skipping reaction {idx}')  # Explanation: prints progress or diagnostic information
                 print()  # Explanation: prints progress or diagnostic information
                 sys.stdout.flush()  # Explanation: executes this statement as part of extract reaction edit labels and vocabularies
                 continue  # Explanation: skips the rest of this loop iteration
@@ -183,8 +183,6 @@ def main():  # Explanation: defines main, which runs this script from command-li
     parser.add_argument('--dataset', type=str, default='USPTO_50k', help='dataset: USPTO_50k or uspto_full or uspto_mit')
     parser.add_argument('--mode', type=str, default='train', help='Type of dataset being prepared: train, val/valid, or test')
     parser.add_argument('--print_every', type=int, default=1000, help='Print during preprocessing')
-    parser.add_argument('--max_steps', type=int, default=None, help='maximum number of edit steps')
-    parser.add_argument('--lg_min_freq', type=int, default=None, help='minimum leaving-group edit frequency')
     parser.add_argument('--kekulize', default=True, action='store_true', help='Whether to kekulize mols during training')
     parser.add_argument('--verbose', action='store_true', help='Print verbose vocab diagnostics')
     parser.add_argument('--root_dir', type=str, default='.', help='Repository/data root containing data/ and experiments/')
@@ -193,10 +191,8 @@ def main():  # Explanation: defines main, which runs this script from command-li
     args.dataset = normalize_dataset_name(args.dataset)
     args.mode = normalize_split_name(args.mode)
     spec = get_dataset_spec(args.dataset)
-    if args.max_steps is None:
-        args.max_steps = spec.max_edit_steps
-    if args.lg_min_freq is None:
-        args.lg_min_freq = spec.lg_min_freq
+    args.max_steps = spec.max_edit_steps
+    args.lg_min_freq = spec.lg_min_freq
     paths = resolve_project_paths(args.root_dir)
     datadir = str(paths.dataset_dir(args.dataset))
     rxn_key = 'reactants>reagents>production'
